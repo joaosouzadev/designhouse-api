@@ -2,8 +2,11 @@
 
 namespace App\Exceptions;
 
-use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Exceptions\ModelNotDefined;
 
 class Handler extends ExceptionHandler
 {
@@ -49,7 +52,31 @@ class Handler extends ExceptionHandler
      * @throws \Throwable
      */
     public function render($request, Throwable $exception)
-    {
+    {   
+        if ($exception instanceof AuthorizationException && $request->expectsJson()) {
+            return response()->json([
+                'errors' => [
+                    'message' => 'Você não está autorizado a acessar este recurso'
+                ]
+            ], 403);
+        }
+
+        if ($exception instanceof ModelNotFoundException && $request->expectsJson()) {
+            return response()->json([
+                'errors' => [
+                    'message' => 'Este recurso não existe'
+                ]
+            ], 403);
+        }
+
+        if ($exception instanceof ModelNotDefined && $request->expectsJson()) {
+            return response()->json([
+                'errors' => [
+                    'message' => 'Model nao definido'
+                ]
+            ], 500);
+        }
+
         return parent::render($request, $exception);
     }
 }
