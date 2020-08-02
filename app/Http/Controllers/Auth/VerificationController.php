@@ -8,18 +8,21 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\URL;
+use App\Repositories\Contracts\UserInterface;
 
 class VerificationController extends Controller
 {
+    protected $userInterface;
 
     /**
      * Create a new controller instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(UserInterface $userInterface)
     {
         $this->middleware('throttle:6,1')->only('verify', 'resend');
+        $this->userInterface = $userInterface;
     }
 
     public function verify(Request $request, User $user) {
@@ -54,7 +57,7 @@ class VerificationController extends Controller
             'email' => ['email', 'required']
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = $this->userInterface->findWhereFirst('email', $request->email);
 
         if (!$user) {
             return response()->json(

@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
+use App\Repositories\Contracts\UserInterface;
 
 class RegisterController extends Controller
 {
@@ -24,6 +25,12 @@ class RegisterController extends Controller
     */
 
     use RegistersUsers;
+
+    protected $userInterface;
+
+    public function __construct(UserInterface $userInterface) {
+        $this->userInterface = $userInterface;
+    }
 
     protected function registered(Request $request, User $user)
     {
@@ -54,7 +61,7 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
-        return User::create([
+        return $this->userInterface->create([
             'username' => $data['username'],
             'name' => $data['name'],
             'email' => $data['email'],

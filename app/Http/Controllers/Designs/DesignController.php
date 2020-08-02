@@ -9,7 +9,9 @@ use App\Models\Design;
 use App\Http\Resources\DesignResource;
 use Storage;
 use App\Repositories\Contracts\DesignInterface;
-
+use App\Repositories\Eloquent\Criteria\LatestFirst;
+use App\Repositories\Eloquent\Criteria\IsLive;
+use App\Repositories\Eloquent\Criteria\ForUser;
 
 class DesignController extends Controller
 {
@@ -20,13 +22,22 @@ class DesignController extends Controller
 	}
 
 	public function index() {
-		$designs = $this->designInterface->all();
+		$designs = $this->designInterface->withCriteria([
+            new LatestFirst(), 
+            new IsLive(), 
+            new ForUser(auth()->user()->id)
+        ])->all();
 		return DesignResource::collection($designs);
+	}
+
+	public function findDesign($id) {
+		$design = $this->designInterface->find($id);
+		return new DesignResource($design);
 	}
 
 	public function update(Request $request, $id) {
 
-    	$design = Design::findOrFail($id);
+    	$design = $this->designInterface->find($id);
 
     	$this->authorize('update', $design);
 
@@ -36,21 +47,21 @@ class DesignController extends Controller
     		'tags' => ['required']
     	]);
 
-    	$design->update([
+    	$design = $this->designInterface->update($id, [
     		'title' => $request->title,
     		'description' => $request->description,
     		'slug' => Str::slug($request->title),
     		'is_live' => !$design->upload_successful ? false : $request->is_live
     	]);
 
-    	$design->retag($request->tags);
+    	$this->designInterface->applyTags($id, $request->tags);
 
     	return new DesignResource($design);
 	}
 
 	public function destroy(Request $request, $id) {
 
-    	$design = Design::findOrFail($id);
+    	$design = $this->designInterface->find($id);
 
     	$this->authorize('delete', $design);
 
@@ -60,7 +71,7 @@ class DesignController extends Controller
     		}
     	}
 
-    	$design->delete();
+    	$this->designInterface->delete($id);
 
     	return response()->json(['message' => 'Registro deletado', 200]);
 	}

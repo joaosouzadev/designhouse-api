@@ -8,9 +8,16 @@ use Grimzy\LaravelMysqlSpatial\Types\Point;
 use App\Http\Resources\UserResource;
 use App\Rules\MatchOldPassword;
 use App\Rules\CheckSamePassword;
+use App\Repositories\Contracts\UserInterface;
 
 class SettingsController extends Controller
 {
+    protected $userInterface;
+
+    public function __construct(UserInterface $userInterface) {
+        $this->userInterface = $userInterface;
+    }
+
     public function updateProfile(Request $request) {
     	$user = auth()->user();
 
@@ -25,13 +32,15 @@ class SettingsController extends Controller
 
     	$location = new Point($request->location['latitude'], $request->location['longitude']);
 
-    	$user->update([
-    		'name' => $request->name,
-    		'tagline' => $request->tagline,
-    		'about' => $request->about,
-    		'formatted_address' => $request->formatted_address,
-    		'location' => $location
-    	]);
+    	$user = $this->userInterface->update(auth()->id(),
+            [
+        		'name' => $request->name,
+        		'tagline' => $request->tagline,
+        		'about' => $request->about,
+        		'formatted_address' => $request->formatted_address,
+        		'location' => $location
+        	]
+        );
 
     	return new UserResource($user);
     }
@@ -44,9 +53,11 @@ class SettingsController extends Controller
     		'password' => ['required', 'confirmed', 'min:6', new CheckSamePassword]
     	]);
     	
-    	$request->user()->update([
-    		'password' => bcrypt($request->password)
-    	]);
+    	$user = $this->userInterface->update(auth()->id(),
+            [
+    		  'password' => bcrypt($request->password)
+            ]
+    	);
 
     	return response()->json([
     		'message' => 'Senha atualizada'
